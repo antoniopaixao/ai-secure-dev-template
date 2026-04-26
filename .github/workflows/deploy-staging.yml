@@ -1,0 +1,77 @@
+name: Deploy Staging Placeholder
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Reason for running the staging deployment placeholder"
+        required: false
+        default: "Manual staging deployment test"
+
+permissions:
+  contents: read
+
+jobs:
+  staging-preflight:
+    name: Staging preflight
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+
+    env:
+      APP_ENV: ${{ vars.APP_ENV }}
+      DEPLOY_TARGET: ${{ vars.DEPLOY_TARGET }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Validate staging environment variables
+        run: |
+          echo "Validating staging environment variables..."
+
+          if [ -z "${APP_ENV}" ]; then
+            echo "::error::APP_ENV is not configured for the staging environment."
+            exit 1
+          fi
+
+          if [ -z "${DEPLOY_TARGET}" ]; then
+            echo "::error::DEPLOY_TARGET is not configured for the staging environment."
+            exit 1
+          fi
+
+          if [ "${APP_ENV}" != "staging" ]; then
+            echo "::error::APP_ENV must be 'staging'. Current value: ${APP_ENV}"
+            exit 1
+          fi
+
+          if [ "${DEPLOY_TARGET}" != "staging" ]; then
+            echo "::error::DEPLOY_TARGET must be 'staging'. Current value: ${DEPLOY_TARGET}"
+            exit 1
+          fi
+
+          echo "Staging environment variables are valid."
+
+      - name: Simulate staging deployment
+        run: |
+          echo "Simulating staging deployment..."
+          echo "No real infrastructure changes are being made."
+          echo "This validates GitHub Actions environment wiring only."
+
+      - name: Write deployment summary
+        run: |
+          {
+            echo "## Staging Deployment Placeholder"
+            echo ""
+            echo "Status: successful"
+            echo ""
+            echo "| Item | Value |"
+            echo "|---|---|"
+            echo "| Environment | staging |"
+            echo "| APP_ENV | ${APP_ENV} |"
+            echo "| DEPLOY_TARGET | ${DEPLOY_TARGET} |"
+            echo "| Branch | ${GITHUB_REF_NAME} |"
+            echo "| Commit | ${GITHUB_SHA} |"
+            echo ""
+            echo "No real deployment was performed."
+          } >> "$GITHUB_STEP_SUMMARY"
