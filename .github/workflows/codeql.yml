@@ -24,6 +24,10 @@ jobs:
     name: CodeQL analyze
     runs-on: ubuntu-latest
 
+    # Dependabot pull requests run with restricted permissions.
+    # CI still validates Dependabot PRs; CodeQL runs after merge on main.
+    if: github.actor != 'dependabot[bot]'
+
     strategy:
       fail-fast: false
       matrix:
