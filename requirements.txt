@@ -1,0 +1,5 @@
+# Runtime dependencies for the project.
+# Add application dependencies here, for example:
+# fastapi
+# uvicorn[standard]
+# pydantic

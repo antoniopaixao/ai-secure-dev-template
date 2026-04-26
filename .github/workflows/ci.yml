@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches:
+      - main
+      - develop
+      - "feature/**"
+      - "fix/**"
+      - "security/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  python-quality:
+    name: Python quality checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - name: Install QA tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+      - name: Install project dependencies if available
+        run: |
+          if [ -f requirements.txt ]; then
+            python -m pip install -r requirements.txt
+          fi
+      - name: Ruff lint
+        run: ruff check .
+      - name: Mypy type check
+        run: |
+          if find app -name "*.py" | grep -q .; then
+            mypy app
+          else
+            echo "No Python application files found under app/. Skipping mypy."
+          fi
+      - name: Pytest
+        run: pytest
+      - name: Bandit security scan
+        run: |
+          if find app -name "*.py" | grep -q .; then
+            bandit -r app -c pyproject.toml
+          else
+            echo "No Python application files found under app/. Skipping bandit."
+          fi
+      - name: pip-audit dependency scan
+        run: |
+          if [ -f requirements.txt ] && grep -vE '^\s*(#|$)' requirements.txt | grep -q .; then
+            pip-audit -r requirements.txt
+          else
+            echo "No runtime dependencies found in requirements.txt. Skipping pip-audit."
+          fi
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  filesystem-security:
+    name: Filesystem security scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          severity: "CRITICAL,HIGH"
+          ignore-unfixed: true
+          format: "table"
+          exit-code: "1"
