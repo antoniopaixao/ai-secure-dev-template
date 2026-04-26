@@ -1,0 +1,99 @@
+name: Deploy Production Placeholder
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Reason for running the production deployment placeholder"
+        required: true
+        default: "Manual production deployment approval test"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-production-source:
+    name: Validate production source branch
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ensure production deploy is triggered from main
+        run: |
+          echo "Current ref: ${GITHUB_REF}"
+          echo "Current branch: ${GITHUB_REF_NAME}"
+
+          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "::error::Production deployments are only allowed from the main branch."
+            exit 1
+          fi
+
+          echo "Production source branch is valid."
+
+  production-preflight:
+    name: Production preflight and approval gate
+    runs-on: ubuntu-latest
+    needs:
+      - validate-production-source
+
+    environment:
+      name: production
+
+    env:
+      APP_ENV: ${{ vars.APP_ENV }}
+      DEPLOY_TARGET: ${{ vars.DEPLOY_TARGET }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Validate production environment variables
+        run: |
+          echo "Validating production environment variables..."
+
+          if [ -z "${APP_ENV}" ]; then
+            echo "::error::APP_ENV is not configured for the production environment."
+            exit 1
+          fi
+
+          if [ -z "${DEPLOY_TARGET}" ]; then
+            echo "::error::DEPLOY_TARGET is not configured for the production environment."
+            exit 1
+          fi
+
+          if [ "${APP_ENV}" != "production" ]; then
+            echo "::error::APP_ENV must be 'production'. Current value: ${APP_ENV}"
+            exit 1
+          fi
+
+          if [ "${DEPLOY_TARGET}" != "production" ]; then
+            echo "::error::DEPLOY_TARGET must be 'production'. Current value: ${DEPLOY_TARGET}"
+            exit 1
+          fi
+
+          echo "Production environment variables are valid."
+
+      - name: Simulate production deployment
+        run: |
+          echo "Simulating production deployment..."
+          echo "No real infrastructure changes are being made."
+          echo "This validates GitHub Actions production environment approval only."
+
+      - name: Write deployment summary
+        run: |
+          {
+            echo "## Production Deployment Placeholder"
+            echo ""
+            echo "Status: successful"
+            echo ""
+            echo "| Item | Value |"
+            echo "|---|---|"
+            echo "| Environment | production |"
+            echo "| APP_ENV | ${APP_ENV} |"
+            echo "| DEPLOY_TARGET | ${DEPLOY_TARGET} |"
+            echo "| Branch | ${GITHUB_REF_NAME} |"
+            echo "| Commit | ${GITHUB_SHA} |"
+            echo ""
+            echo "No real deployment was performed."
+            echo ""
+            echo "This workflow confirms that the production approval gate is working."
+          } >> "$GITHUB_STEP_SUMMARY"
