@@ -2,9 +2,13 @@ name: CodeQL
 
 on:
   push:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
   pull_request:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
   schedule:
     - cron: "24 3 * * 1"
   workflow_dispatch:
@@ -19,19 +23,22 @@ jobs:
   analyze:
     name: CodeQL analyze
     runs-on: ubuntu-latest
+
     strategy:
       fail-fast: false
       matrix:
-        language: [python]
+        language:
+          - python
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
           queries: security-extended,security-and-quality
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v3
